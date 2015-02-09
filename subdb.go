@@ -2,6 +2,8 @@ package kvl
 
 import (
 	"bytes"
+
+	"git.encryptio.com/kvl/keys"
 )
 
 type subDB struct {
@@ -68,9 +70,15 @@ func (s subCtx) Delete(key []byte) error {
 }
 
 func (s subCtx) Range(query RangeQuery) ([]Pair, error) {
+	var high []byte
+	if len(query.High) == 0 {
+		high = keys.PrefixNext(s.prefix)
+	} else {
+		high = prependCopy(s.prefix, query.High)
+	}
 	ps, err := s.ctx.Range(RangeQuery{
 		Low: prependCopy(s.prefix, query.Low),
-		High: prependCopy(s.prefix, query.High),
+		High: high,
 		Limit: query.Limit,
 		Descending: query.Descending,
 	})
