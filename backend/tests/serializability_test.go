@@ -11,7 +11,7 @@ import (
 
 func testShuffleShardedIncrement(t *testing.T, s kvl.DB) {
 	const (
-		transactionsPerGoroutine = 300
+		transactionsPerGoroutine = 100
 		parallelism              = 10
 		rowCount                 = 3000
 	)
@@ -137,7 +137,7 @@ func testRangeMaxRandomReplacement(t *testing.T, s kvl.DB) {
 	const (
 		transactionsPerGoroutine = 20
 		parallelism              = 4
-		rowCount                 = 5000
+		rowCount                 = 3000
 	)
 
 	err := clearDB(s)
