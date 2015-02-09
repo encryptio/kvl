@@ -14,24 +14,28 @@ var (
 )
 
 func UnpackInto(t []byte, vs ...interface{}) error {
+	left, err := UnpackIntoPartial(t, vs...)
+	if err == nil && len(left) > 0 {
+		return ErrTooFewElements
+	}
+	return err
+}
+
+func UnpackIntoPartial(t []byte, vs ...interface{}) ([]byte, error) {
 	for _, v := range vs {
 		if len(t) == 0 {
-			return ErrTooFewElements
+			return t, nil
 		}
 
 		i, err := UnpackElement(t, v)
 		if err != nil {
-			return err
+			return t, err
 		}
 
 		t = t[i:]
 	}
 
-	if len(t) > 0 {
-		return ErrTooManyElements
-	}
-
-	return nil
+	return t, nil
 }
 
 func UnpackElement(t []byte, v interface{}) (int, error) {

@@ -30,6 +30,14 @@ import (
 
 var ErrUnsupportedType = errors.New("unsupported type for tuple operation")
 
+func MustAppend(t []byte, vs ...interface{}) []byte {
+	ret, err := Append(t, vs...)
+	if err != nil {
+		panic(err)
+	}
+	return ret
+}
+
 func Append(t []byte, vs ...interface{}) ([]byte, error) {
 	for _, v := range vs {
 		var err error
