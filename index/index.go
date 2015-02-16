@@ -20,12 +20,10 @@ type ctxWrap struct {
 	*Index
 }
 
-var dataPrefix, indexPrefix []byte
-
-func init() {
-	dataPrefix, _ = tuple.Append(nil, "data")
-	indexPrefix, _ = tuple.Append(nil, "index")
-}
+var (
+	dataPrefix  = tuple.MustAppend(nil, "data")
+	indexPrefix = tuple.MustAppend(nil, "index")
+)
 
 func Open(ctx kvl.Ctx, fn Indexer) (kvl.Ctx, *Index, error) {
 	vals := fn(kvl.Pair{})
