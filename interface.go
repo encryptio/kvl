@@ -2,6 +2,7 @@ package kvl
 
 import (
 	"bytes"
+	"fmt"
 	"errors"
 )
 
@@ -26,6 +27,10 @@ func (p Pair) IsZero() bool {
 
 func (p Pair) Equal(q Pair) bool {
 	return bytes.Equal(p.Key, q.Key) && bytes.Equal(p.Value, q.Value)
+}
+
+func (p Pair) String() string {
+	return fmt.Sprintf("Pair{%#v -> %#v}", string(p.Key), string(p.Value))
 }
 
 type RangeQuery struct {
