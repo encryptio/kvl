@@ -2,6 +2,7 @@ package index
 
 import (
 	"fmt"
+	"reflect"
 	"testing"
 
 	"git.encryptio.com/kvl"
@@ -115,5 +116,81 @@ func TestIndexBasics(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatalf("Couldn't read data after second write: %v", err)
+	}
+}
+
+func TestIndexDelete(t *testing.T) {
+	db := ram.New()
+
+	flipIndexer := func(p kvl.Pair) []kvl.Pair {
+		if p.IsZero() {
+			return nil
+		}
+		return []kvl.Pair{kvl.Pair{p.Value, p.Key}}
+	}
+
+	_, err := db.RunTx(func(ctx kvl.Ctx) (interface{}, error) {
+		inner, index, err := Open(ctx, flipIndexer)
+		if err != nil {
+			return nil, err
+		}
+
+		err = inner.Set(kvl.Pair{[]byte("a"), []byte("b")})
+		if err != nil {
+			return nil, err
+		}
+
+		err = inner.Set(kvl.Pair{[]byte("c"), []byte("d")})
+		if err != nil {
+			return nil, err
+		}
+
+		innerPairs, err := inner.Range(kvl.RangeQuery{})
+		if err != nil {
+			return nil, err
+		}
+		wantInnerPairs := []kvl.Pair{
+			kvl.Pair{[]byte("a"), []byte("b")},
+			kvl.Pair{[]byte("c"), []byte("d")},
+		}
+		if !reflect.DeepEqual(innerPairs, wantInnerPairs) {
+			return nil, fmt.Errorf("After inserting data, wanted innerPairs = %v, but got %v",
+				wantInnerPairs, innerPairs)
+		}
+
+		indexPairs, err := index.Range(kvl.RangeQuery{})
+		if err != nil {
+			return nil, err
+		}
+		wantIndexPairs := []kvl.Pair{
+			kvl.Pair{[]byte("b"), []byte("a")},
+			kvl.Pair{[]byte("d"), []byte("c")},
+		}
+		if !reflect.DeepEqual(indexPairs, wantIndexPairs) {
+			return nil, fmt.Errorf("After inserting data, wanted indexPairs = %v, but got %v",
+				wantIndexPairs, indexPairs)
+		}
+
+		err = inner.Delete([]byte("a"))
+		if err != nil {
+			return nil, err
+		}
+
+		indexPairs, err = index.Range(kvl.RangeQuery{})
+		if err != nil {
+			return nil, err
+		}
+		wantIndexPairs = []kvl.Pair{
+			kvl.Pair{[]byte("d"), []byte("c")},
+		}
+		if !reflect.DeepEqual(indexPairs, wantIndexPairs) {
+			return nil, fmt.Errorf("After deleting one pair, wanted indexPairs = %v, but got %v",
+				wantIndexPairs, indexPairs)
+		}
+
+		return nil, nil
+	})
+	if err != nil {
+		t.Fatal(err)
 	}
 }
