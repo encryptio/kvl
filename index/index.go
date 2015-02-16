@@ -2,10 +2,16 @@ package index
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 
 	"git.encryptio.com/kvl"
 	"git.encryptio.com/kvl/tuple"
+)
+
+var (
+	ErrUnexpectedlyMissingEntry = errors.New("an index entry was unexpectedly missing")
+	ErrUnexpectedlyPresentEntry = errors.New("an index entry was unexpectedly present")
 )
 
 type Indexer func(kvl.Pair) []kvl.Pair
@@ -109,6 +115,9 @@ func (w ctxWrap) switchIndexValues(oldP, newP kvl.Pair) error {
 		if !found {
 			err := w.indexCtx.Delete(p.Key)
 			if err != nil {
+				if err == kvl.ErrNotFound {
+					return ErrUnexpectedlyMissingEntry
+				}
 				return err
 			}
 		}
@@ -125,7 +134,15 @@ func (w ctxWrap) switchIndexValues(oldP, newP kvl.Pair) error {
 		}
 
 		if !found {
-			err := w.indexCtx.Set(p)
+			_, err := w.indexCtx.Get(p.Key)
+			if err != kvl.ErrNotFound {
+				if err != nil {
+					return err
+				}
+				return ErrUnexpectedlyPresentEntry
+			}
+
+			err = w.indexCtx.Set(p)
 			if err != nil {
 				return err
 			}

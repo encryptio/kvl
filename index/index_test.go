@@ -194,3 +194,36 @@ func TestIndexDelete(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestIndexDuplicates(t *testing.T) {
+	db := ram.New()
+
+	flipIndexer := func(p kvl.Pair) []kvl.Pair {
+		if p.IsZero() {
+			return nil
+		}
+		return []kvl.Pair{kvl.Pair{p.Value, p.Key}}
+	}
+
+	_, err := db.RunTx(func(ctx kvl.Ctx) (interface{}, error) {
+		inner, _, err := Open(ctx, flipIndexer)
+		if err != nil {
+			return nil, err
+		}
+
+		err = inner.Set(kvl.Pair{[]byte("a"), []byte("b")})
+		if err != nil {
+			return nil, err
+		}
+
+		err = inner.Set(kvl.Pair{[]byte("c"), []byte("b")})
+		if err != nil {
+			return nil, err
+		}
+
+		return nil, nil
+	})
+	if err != ErrUnexpectedlyPresentEntry {
+		t.Fatalf("Wanted %v, got err = %v", ErrUnexpectedlyPresentEntry, err)
+	}
+}
