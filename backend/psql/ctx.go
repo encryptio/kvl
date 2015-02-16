@@ -71,6 +71,10 @@ func (c *ctx) Delete(key []byte) error {
 		return kvl.ErrNotFound
 	}
 
+	if count > 1 {
+		panic("single deletion matched multiple rows")
+	}
+
 	return nil
 }
 
