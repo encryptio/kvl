@@ -8,11 +8,10 @@ import (
 )
 
 const (
-	REINDEX_DELETE = 1 << iota
-
 	bloomSize              = 1024 * 1024 * 8 * 8 // 8MiB of bits
 	reindexChunkSize       = 100
 	reindexDeleteChunkSize = 1000
+	reindexDeleteKeyMemory = 1024 * 1024 * 128 // 128MiB of expired keys
 )
 
 type ReindexStats struct {
@@ -59,29 +58,22 @@ func (rs ReindexStats) addTo(r2 *ReindexStats) {
 // Reindex checks all data pairs in the database given and makes sure the index
 // entries for all data pairs are consistent with the Indexer function given.
 //
-// If the REINDEX_DELETE flag is given, Reindex also probabalistically removes
-// old index entries. It is not guaranteed to remove all old index entries.
+// Extraneous index entries might be missed for deletion; you should repeatedly
+// call Reindex until the Deleted field of the ReindexStats returned is low
+// enough for your liking.
 //
-// Passing REINDEX_DELETE is may cause inconsistent indexes if parallel writes
-// are occurring, because the reindexing process is spread across many
-// transactions. If temporary index inconsistency is acceptable, run Reindex
-// with the REINDEX_DELETE flag and then immediately run it again without that
-// flag to add the incorrectly removed Pairs back to the database.
+// Note that there are race conditions if you are repeatedly adding and removing
+// the same index entry during Reindexing; it may be unexpectedly removed if
+// you're unlucky.
 //
 // The progress channel passed, if any, will be sent partial ReindexStats as
 // the reindex occurs.
-func Reindex(db kvl.DB, fn Indexer, options uint64,
-	progress chan<- ReindexStats) (ReindexStats, error) {
-
-	deleteFlag := (options & REINDEX_DELETE) != 0
-
+func Reindex(db kvl.DB, fn Indexer, progress chan<- ReindexStats) (ReindexStats, error) {
 	var stats ReindexStats
+	bloom := newBloom(bloomSize)
 
-	var bloom *bloom
-	if deleteFlag {
-		bloom = newBloom(bloomSize)
-	}
-
+	// 1st pass: Search for missing index entries and build bloom filter of
+	// index keys.
 	var from []byte
 	done := false
 	for !done {
@@ -120,9 +112,7 @@ func Reindex(db kvl.DB, fn Indexer, options uint64,
 						}
 					}
 
-					if deleteFlag {
-						bloom.Set(ip.Key)
-					}
+					bloom.Set(ip.Key)
 				}
 			}
 
@@ -148,40 +138,136 @@ func Reindex(db kvl.DB, fn Indexer, options uint64,
 		}
 	}
 
-	if deleteFlag {
-		stats.DeletionMissRate = bloom.Fullness()
+	// 2nd pass: Search index keys for things missing in the bloom filter and
+	// collect them in a map.
+	from = nil
+	done = false
+	stats.DeletionMissRate = bloom.Fullness()
+	wantRemove := make(map[string]struct{}, 100)
+	wantRemoveSize := 0
+	for !done {
+		var thisRemove map[string]struct{}
+		ret, err := db.RunTx(func(ctx kvl.Ctx) (interface{}, error) {
+			thisRemove = make(map[string]struct{}, 100)
+			indexCtx := kvl.SubCtx(ctx, indexPrefix)
 
+			var stats ReindexStats
+
+			ps, err := indexCtx.Range(kvl.RangeQuery{
+				Low:   from,
+				Limit: reindexDeleteChunkSize,
+			})
+			if err != nil {
+				return nil, err
+			}
+
+			for _, p := range ps {
+				stats.IndexRowsChecked++
+				if !bloom.Test(p.Key) {
+					thisRemove[string(p.Key)] = struct{}{}
+				}
+			}
+
+			if len(ps) < reindexDeleteChunkSize {
+				done = true
+			} else {
+				from = keys.LexNext(ps[len(ps)-1].Key)
+			}
+
+			stats.Transactions++
+
+			return stats, nil
+		})
+		if err != nil {
+			return stats, err
+		}
+
+		for k := range thisRemove {
+			wantRemove[k] = struct{}{}
+			wantRemoveSize += len(k) + 8
+		}
+
+		newStats := ret.(ReindexStats)
+		newStats.addTo(&stats)
+
+		if progress != nil {
+			progress <- stats
+		}
+
+		if wantRemoveSize > reindexDeleteKeyMemory {
+			break
+		}
+	}
+
+	if wantRemoveSize > 0 {
+		// 3rd pass: Scan data again to ensure the index keys we want to remove
+		// are not newly added.
 		from = nil
 		done = false
 		for !done {
 			ret, err := db.RunTx(func(ctx kvl.Ctx) (interface{}, error) {
-				indexCtx := kvl.SubCtx(ctx, indexPrefix)
+				dataCtx := kvl.SubCtx(ctx, dataPrefix)
 
 				var stats ReindexStats
 
-				ps, err := indexCtx.Range(kvl.RangeQuery{
+				ps, err := dataCtx.Range(kvl.RangeQuery{
 					Low:   from,
-					Limit: reindexDeleteChunkSize,
+					Limit: reindexChunkSize,
 				})
 				if err != nil {
 					return nil, err
 				}
 
 				for _, p := range ps {
-					stats.IndexRowsChecked++
-					if !bloom.Test(p.Key) {
-						err := indexCtx.Delete(p.Key)
-						if err != nil {
-							return nil, err
-						}
-						stats.Deleted++
+					stats.DataRowsChecked++
+					indexPairs := fn(p)
+
+					for _, ip := range indexPairs {
+						delete(wantRemove, string(ip.Key))
 					}
 				}
 
-				if len(ps) < reindexDeleteChunkSize {
+				if len(ps) < reindexChunkSize {
 					done = true
 				} else {
 					from = keys.LexNext(ps[len(ps)-1].Key)
+				}
+
+				stats.Transactions++
+
+				return stats, nil
+			})
+			if err != nil {
+				return stats, err
+			}
+
+			newStats := ret.(ReindexStats)
+			newStats.addTo(&stats)
+
+			if progress != nil {
+				progress <- stats
+			}
+		}
+
+		// 4th pass: remove index entries we want to remove.
+		for len(wantRemove) > 0 {
+			ret, err := db.RunTx(func(ctx kvl.Ctx) (interface{}, error) {
+				indexCtx := kvl.SubCtx(ctx, indexPrefix)
+
+				var stats ReindexStats
+
+				for k := range wantRemove {
+					delete(wantRemove, k)
+
+					err := indexCtx.Delete([]byte(k))
+					if err != nil {
+						return nil, err
+					}
+
+					stats.Deleted++
+					if stats.Deleted > reindexChunkSize {
+						break
+					}
 				}
 
 				stats.Transactions++

@@ -52,7 +52,7 @@ func TestReindex(t *testing.T) {
 		t.Fatalf("Couldn't insert initial data: %v", err)
 	}
 
-	stats, err := Reindex(db, flipIndex, 0, nil)
+	stats, err := Reindex(db, flipIndex, nil)
 	t.Logf("Reindex for flipIndex complete: %v", stats)
 	if err != nil {
 		t.Fatalf("Couldn't reindex to flipIndex: %v", err)
@@ -85,7 +85,7 @@ func TestReindex(t *testing.T) {
 		t.Fatalf("Couldn't check data after flipIndex reindex: %v", err)
 	}
 
-	stats, err = Reindex(db, onlyOddFlipIndex, REINDEX_DELETE, nil)
+	stats, err = Reindex(db, onlyOddFlipIndex, nil)
 	t.Logf("Reindex for onlyOddFlipIndex complete: %v", stats)
 	if err != nil {
 		t.Fatalf("Couldn't reindex to onlyOddFlipIndex: %v", err)
