@@ -2,8 +2,8 @@ package kvl
 
 import (
 	"bytes"
-	"fmt"
 	"errors"
+	"fmt"
 )
 
 var (
@@ -34,8 +34,8 @@ func (p Pair) String() string {
 }
 
 type RangeQuery struct {
-	Low, High []byte
-	Limit int
+	Low, High  []byte
+	Limit      int
 	Descending bool
 }
 

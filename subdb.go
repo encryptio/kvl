@@ -7,7 +7,7 @@ import (
 )
 
 type subDB struct {
-	db DB
+	db     DB
 	prefix []byte
 }
 
@@ -23,7 +23,7 @@ func SubDB(db DB, prefix []byte) DB {
 }
 
 func (s subDB) RunTx(tx Tx) (interface{}, error) {
-	return s.db.RunTx(func (ctx Ctx) (interface{}, error) {
+	return s.db.RunTx(func(ctx Ctx) (interface{}, error) {
 		return tx(SubCtx(ctx, s.prefix))
 	})
 }
@@ -35,7 +35,7 @@ func (s subDB) Close() {
 }
 
 type subCtx struct {
-	ctx Ctx
+	ctx    Ctx
 	prefix []byte
 }
 
@@ -49,7 +49,7 @@ func SubCtx(ctx Ctx, prefix []byte) Ctx {
 }
 
 func prependCopy(a, b []byte) []byte {
-	c := make([]byte, len(a) + len(b))
+	c := make([]byte, len(a)+len(b))
 	copy(c, a)
 	copy(c[len(a):], b)
 	return c
@@ -77,9 +77,9 @@ func (s subCtx) Range(query RangeQuery) ([]Pair, error) {
 		high = prependCopy(s.prefix, query.High)
 	}
 	ps, err := s.ctx.Range(RangeQuery{
-		Low: prependCopy(s.prefix, query.Low),
-		High: high,
-		Limit: query.Limit,
+		Low:        prependCopy(s.prefix, query.Low),
+		High:       high,
+		Limit:      query.Limit,
 		Descending: query.Descending,
 	})
 	for i := range ps {

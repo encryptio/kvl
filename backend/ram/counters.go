@@ -13,8 +13,8 @@ var theCounters Counters
 // the face of parallel transactions, but the GetCounters and ResetCounters
 // functions do not operate on the set of all counters atomically.
 type Counters struct {
-	Aborts uint64
-	Errors uint64
+	Aborts  uint64
+	Errors  uint64
 	Commits uint64
 }
 
