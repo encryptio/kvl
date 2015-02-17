@@ -3,6 +3,7 @@ package tuple
 import (
 	"fmt"
 	"math/big"
+	"reflect"
 )
 
 type CannotConvertError struct {
@@ -19,6 +20,16 @@ type IntRangeError struct {
 
 func (e IntRangeError) Error() string {
 	return fmt.Sprintf("integer %v is out of range of destination type %T", e.From, e.To)
+}
+
+type ArrayLengthError struct {
+	From, To       interface{}
+	FromLen, ToLen int
+}
+
+func (e ArrayLengthError) Error() string {
+	return fmt.Sprintf("length of target %v does not match length of source %v",
+		e.FromLen, e.ToLen)
 }
 
 var maxInt64, maxUint64, minInt64 big.Int
@@ -44,6 +55,24 @@ func convertAssign(to, from interface{}) error {
 		case *[]byte:
 			*to = from
 			return nil
+		default:
+			rv := reflect.ValueOf(to)
+			if rv.Kind() == reflect.Ptr &&
+				rv.Elem().Kind() == reflect.Array &&
+				rv.Elem().Type().Elem().Kind() == reflect.Uint8 {
+
+				if len(from) != rv.Elem().Len() {
+					return ArrayLengthError{
+						From:    from,
+						To:      to,
+						FromLen: len(from),
+						ToLen:   rv.Elem().Len(),
+					}
+				}
+
+				reflect.Copy(rv.Elem(), reflect.ValueOf(from))
+				return nil
+			}
 		}
 	case bool:
 		to, ok := to.(*bool)

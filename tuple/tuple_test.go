@@ -67,6 +67,8 @@ func TestFormat(t *testing.T) {
 		{"hello", []byte{0x80, 'h', 'e', 'l', 'l', 'o', 0}},
 		{[]byte("hello"), []byte{0x80, 'h', 'e', 'l', 'l', 'o', 0}},
 		{"one\x01zero\x00", []byte{0x80, 'o', 'n', 'e', 1, 1, 'z', 'e', 'r', 'o', 1, 0, 0}},
+		{[4]byte{1, 2, 3, 4}, []byte{0x80, 1, 1, 2, 3, 4, 0}},
+		{[16]byte{5, 6, 7, 8, 5, 6, 7, 8, 5, 6, 7, 8, 9, 10, 11, 12}, []byte{0x80, 5, 6, 7, 8, 5, 6, 7, 8, 5, 6, 7, 8, 9, 10, 11, 12, 0}},
 	}
 
 	for _, test := range tests {
@@ -79,6 +81,28 @@ func TestFormat(t *testing.T) {
 		if !bytes.Equal(out, test.Encoded) {
 			t.Errorf("Encode(%#v) = %v, wanted %v", test.Value, out, test.Encoded)
 		}
+	}
+}
+
+func TestArrays(t *testing.T) {
+	value := [4]byte{1, 2, 3, 4}
+	out := MustAppend(nil, value)
+
+	var decValue [4]byte
+	err := UnpackInto(out, &decValue)
+	if err != nil {
+		t.Errorf("UnpackInto returned unexpected error %v", err)
+	}
+	if decValue != value {
+		t.Errorf("UnpackInto set decValue to %v, but wanted %v",
+			decValue, value)
+	}
+
+	var decValueBad [8]byte
+	err = UnpackInto(out, &decValueBad)
+	if _, ok := err.(ArrayLengthError); !ok {
+		t.Errorf("UnpackInto returned error %v, but wanted an ArrayLengthError",
+			err)
 	}
 }
 

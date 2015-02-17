@@ -3,6 +3,7 @@ package tuple
 import (
 	"errors"
 	"math/big"
+	"reflect"
 )
 
 // Tuples are byte strings of this form:
@@ -86,6 +87,14 @@ func AppendElement(t []byte, v interface{}) ([]byte, error) {
 	case []byte:
 		return appendBytes(t, v), nil
 	default:
+		rv := reflect.ValueOf(v)
+		if rv.Kind() == reflect.Array &&
+			rv.Type().Elem().Kind() == reflect.Uint8 {
+
+			slice := make([]byte, rv.Len())
+			reflect.Copy(reflect.ValueOf(slice), rv)
+			return appendBytes(t, slice), nil
+		}
 		return nil, ErrUnsupportedType
 	}
 }
