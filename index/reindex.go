@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	bloomSize              = 1024 * 1024 * 8 * 8 // 8MiB of bits
+	bloomSize              = 1024 * 1024 * 8 * 64 // 64MiB of bits
 	reindexChunkSize       = 100
 	reindexDeleteChunkSize = 1000
 	reindexDeleteKeyMemory = 1024 * 1024 * 128 // 128MiB of expired keys
