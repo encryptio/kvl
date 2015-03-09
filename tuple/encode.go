@@ -42,7 +42,7 @@ func MustAppend(t []byte, vs ...interface{}) []byte {
 func Append(t []byte, vs ...interface{}) ([]byte, error) {
 	for _, v := range vs {
 		var err error
-		t, err = AppendElement(t, v)
+		t, err = appendElement(t, v)
 		if err != nil {
 			return nil, err
 		}
@@ -50,7 +50,7 @@ func Append(t []byte, vs ...interface{}) ([]byte, error) {
 	return t, nil
 }
 
-func AppendElement(t []byte, v interface{}) ([]byte, error) {
+func appendElement(t []byte, v interface{}) ([]byte, error) {
 	switch v := v.(type) {
 	case nil:
 		return append(t, 0), nil

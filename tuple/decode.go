@@ -27,7 +27,7 @@ func UnpackIntoPartial(t []byte, vs ...interface{}) ([]byte, error) {
 			return t, nil
 		}
 
-		i, err := UnpackElement(t, v)
+		i, err := unpackElement(t, v)
 		if err != nil {
 			return t, err
 		}
@@ -38,7 +38,7 @@ func UnpackIntoPartial(t []byte, vs ...interface{}) ([]byte, error) {
 	return t, nil
 }
 
-func UnpackElement(t []byte, v interface{}) (int, error) {
+func unpackElement(t []byte, v interface{}) (int, error) {
 	n, v2, err := decodeElement(t)
 	if err != nil {
 		return 0, err

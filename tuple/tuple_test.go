@@ -72,7 +72,7 @@ func TestFormat(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		out, err := AppendElement(nil, test.Value)
+		out, err := appendElement(nil, test.Value)
 		if err != nil {
 			t.Errorf("Couldn't encode %#v: %v", test.Value, err)
 			continue
@@ -119,7 +119,7 @@ func TestInts(t *testing.T) {
 		for i := 0; i < 3; i++ {
 			n.Rand(rng, &limit).Sub(&n, &half)
 
-			data, err := AppendElement(nil, &n)
+			data, err := appendElement(nil, &n)
 			if err != nil {
 				t.Errorf("Couldn't serialize int %v: %v", &n, err)
 				continue
@@ -167,11 +167,11 @@ func TestCompareInts(t *testing.T) {
 
 			cmp := n1.Cmp(&n2)
 
-			e1, err := AppendElement(nil, &n1)
+			e1, err := appendElement(nil, &n1)
 			if err != nil {
 				t.Fatalf("Couldn't encode %v: %v", n1, err)
 			}
-			e2, err := AppendElement(nil, &n2)
+			e2, err := appendElement(nil, &n2)
 			if err != nil {
 				t.Fatalf("Couldn't encode %v: %v", n2, err)
 			}
@@ -217,7 +217,7 @@ func BenchmarkEncodeInt0Byte(b *testing.B) {
 	var data []byte
 	var err error
 	for i := 0; i < b.N; i++ {
-		data, err = AppendElement(data, int(0))
+		data, err = appendElement(data, int(0))
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -229,7 +229,7 @@ func BenchmarkEncodeInt1Byte(b *testing.B) {
 	var data []byte
 	var err error
 	for i := 0; i < b.N; i++ {
-		data, err = AppendElement(data, int(30))
+		data, err = appendElement(data, int(30))
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -241,7 +241,7 @@ func BenchmarkEncodeInt2Byte(b *testing.B) {
 	var data []byte
 	var err error
 	for i := 0; i < b.N; i++ {
-		data, err = AppendElement(data, int(10000))
+		data, err = appendElement(data, int(10000))
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -253,7 +253,7 @@ func BenchmarkEncodeInt3Byte(b *testing.B) {
 	var data []byte
 	var err error
 	for i := 0; i < b.N; i++ {
-		data, err = AppendElement(data, int(1000000))
+		data, err = appendElement(data, int(1000000))
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -265,7 +265,7 @@ func BenchmarkEncodeInt4Byte(b *testing.B) {
 	var data []byte
 	var err error
 	for i := 0; i < b.N; i++ {
-		data, err = AppendElement(data, int(200000000))
+		data, err = appendElement(data, int(200000000))
 		if err != nil {
 			b.Fatal(err)
 		}
