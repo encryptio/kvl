@@ -272,3 +272,16 @@ func BenchmarkEncodeInt4Byte(b *testing.B) {
 		data = data[:0]
 	}
 }
+
+func BenchmarkEncodeVarious(b *testing.B) {
+	bs := []byte("world")
+	arr := [9]byte{0, 1, 2, 3, 4, 5, 6, 7, 8}
+
+	args := []interface{}{int(1000), "hello", bs, arr}
+
+	var data []byte
+	for i := 0; i < b.N; i++ {
+		data = MustAppend(data, args...)
+		data = data[:0]
+	}
+}
