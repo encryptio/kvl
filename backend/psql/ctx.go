@@ -90,11 +90,11 @@ func (c *ctx) Delete(key []byte) error {
 func (c *ctx) Range(q kvl.RangeQuery) ([]kvl.Pair, error) {
 	params := make([]interface{}, 0, 2)
 	query := "SELECT key, value FROM data WHERE TRUE"
-	if q.Low != nil {
+	if len(q.Low) > 0 {
 		query += fmt.Sprintf(" AND key >= $%v", len(params)+1)
 		params = append(params, q.Low)
 	}
-	if q.High != nil {
+	if len(q.High) > 0 {
 		query += fmt.Sprintf(" AND KEY < $%v", len(params)+1)
 		params = append(params, q.High)
 	}
