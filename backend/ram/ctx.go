@@ -63,6 +63,11 @@ func (c *ctx) Delete(key []byte) error {
 		return kvl.ErrReadOnlyTx
 	}
 
+	_, err := c.Get(key)
+	if err != nil {
+		return err
+	}
+
 	sKey := string(key)
 
 	c.lockKeys = append(c.lockKeys, sKey)
