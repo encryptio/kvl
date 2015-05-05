@@ -28,6 +28,12 @@ func (s subDB) RunTx(tx Tx) (interface{}, error) {
 	})
 }
 
+func (s subDB) RunReadTx(tx Tx) (interface{}, error) {
+	return s.db.RunReadTx(func(ctx Ctx) (interface{}, error) {
+		return tx(SubCtx(ctx, s.prefix))
+	})
+}
+
 // Close operations are ignored on SubDBs. You must close the inner DB yourself
 // at an appropriate time.
 func (s subDB) Close() {

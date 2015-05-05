@@ -17,13 +17,15 @@ type ctx struct {
 	lockKeys   []string
 	lockRanges []keyRange
 	aborted    bool
+	readonly   bool
 }
 
-func newCtx(head *data, mu *sync.RWMutex) *ctx {
+func newCtx(head *data, mu *sync.RWMutex, readonly bool) *ctx {
 	return &ctx{
 		mu:       mu,
 		data:     head,
 		toCommit: make(map[string]*string),
+		readonly: readonly,
 	}
 }
 
@@ -44,6 +46,10 @@ func (c *ctx) Get(key []byte) (kvl.Pair, error) {
 }
 
 func (c *ctx) Set(p kvl.Pair) error {
+	if c.readonly {
+		return kvl.ErrReadOnlyTx
+	}
+
 	sKey := string(p.Key)
 	sValue := string(p.Value)
 
@@ -53,6 +59,10 @@ func (c *ctx) Set(p kvl.Pair) error {
 }
 
 func (c *ctx) Delete(key []byte) error {
+	if c.readonly {
+		return kvl.ErrReadOnlyTx
+	}
+
 	sKey := string(key)
 
 	c.lockKeys = append(c.lockKeys, sKey)

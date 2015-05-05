@@ -23,20 +23,29 @@ func (db *DB) Close() {
 
 func (db *DB) RunTx(tx kvl.Tx) (interface{}, error) {
 	for {
-		data, err, again := db.tryTx(tx)
+		data, err, again := db.tryTx(tx, false)
 		if !again {
 			return data, err
 		}
 	}
 }
 
-func (db *DB) tryTx(tx kvl.Tx) (interface{}, error, bool) {
+func (db *DB) RunReadTx(tx kvl.Tx) (interface{}, error) {
+	for {
+		data, err, again := db.tryTx(tx, true)
+		if !again {
+			return data, err
+		}
+	}
+}
+
+func (db *DB) tryTx(tx kvl.Tx, readonly bool) (interface{}, error, bool) {
 	db.mu.Lock()
 	myData := db.headData
 	myData.refcount++
 	db.mu.Unlock()
 
-	ctx := newCtx(myData, &db.mu)
+	ctx := newCtx(myData, &db.mu, readonly)
 	ret, err := tx(ctx)
 
 	db.mu.Lock()

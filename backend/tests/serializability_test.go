@@ -102,7 +102,7 @@ func testShuffleShardedIncrement(t *testing.T, s kvl.DB) {
 	}
 
 	var total int
-	_, err = s.RunTx(func(ctx kvl.Ctx) (interface{}, error) {
+	_, err = s.RunReadTx(func(ctx kvl.Ctx) (interface{}, error) {
 		pairs, err := ctx.Range(kvl.RangeQuery{})
 		if err != nil {
 			return nil, err
@@ -214,7 +214,7 @@ func testRangeMaxRandomReplacement(t *testing.T, s kvl.DB) {
 	}
 
 	var max int64
-	_, err = s.RunTx(func(ctx kvl.Ctx) (interface{}, error) {
+	_, err = s.RunReadTx(func(ctx kvl.Ctx) (interface{}, error) {
 		pairs, err := ctx.Range(kvl.RangeQuery{})
 		if err != nil {
 			return nil, err

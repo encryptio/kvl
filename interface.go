@@ -7,13 +7,15 @@ import (
 )
 
 var (
-	ErrNotFound = errors.New("key not found")
+	ErrNotFound   = errors.New("key not found")
+	ErrReadOnlyTx = errors.New("transaction not opened for writing")
 )
 
 type Tx func(Ctx) (interface{}, error)
 
 type DB interface {
 	RunTx(Tx) (interface{}, error)
+	RunReadTx(Tx) (interface{}, error)
 	Close()
 }
 
@@ -39,13 +41,9 @@ type RangeQuery struct {
 	Descending bool
 }
 
-type RCtx interface {
+type Ctx interface {
 	Get(key []byte) (Pair, error)
 	Range(query RangeQuery) ([]Pair, error)
-}
-
-type Ctx interface {
-	RCtx
 	Set(p Pair) error
 	Delete(key []byte) error
 }

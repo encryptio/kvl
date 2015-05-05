@@ -56,25 +56,39 @@ func (db *DB) ensureTable() error {
 
 func (db *DB) RunTx(tx kvl.Tx) (interface{}, error) {
 	for {
-		ret, err, again := db.tryTx(tx)
+		ret, err, again := db.tryTx(tx, false)
 		if !again {
 			return ret, err
 		}
 	}
 }
 
-func (db *DB) tryTx(tx kvl.Tx) (interface{}, error, bool) {
+func (db *DB) RunReadTx(tx kvl.Tx) (interface{}, error) {
+	for {
+		ret, err, again := db.tryTx(tx, true)
+		if !again {
+			return ret, err
+		}
+	}
+}
+
+func (db *DB) tryTx(tx kvl.Tx, readonly bool) (interface{}, error, bool) {
 	sqlTx, err := db.sqlDB.Begin()
 	if err != nil {
 		return nil, err, false
 	}
 
-	_, err = sqlTx.Exec("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE")
+	var roClause string
+	if readonly {
+		roClause = ", READ ONLY"
+	}
+
+	_, err = sqlTx.Exec("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE" + roClause)
 	if err != nil {
 		return nil, err, false
 	}
 
-	ctx := &ctx{sqlTx: sqlTx}
+	ctx := &ctx{sqlTx: sqlTx, readonly: readonly}
 
 	ret, err := tx(ctx)
 	if err != nil {

@@ -12,6 +12,7 @@ import (
 type ctx struct {
 	sqlTx      *sql.Tx
 	needsRetry bool
+	readonly   bool
 }
 
 func (c *ctx) checkErr(err error) {
@@ -38,6 +39,10 @@ func (c *ctx) Get(key []byte) (kvl.Pair, error) {
 }
 
 func (c *ctx) Set(p kvl.Pair) error {
+	if c.readonly {
+		return kvl.ErrReadOnlyTx
+	}
+
 	// Upsert
 	_, err := c.sqlTx.Exec(
 		"WITH "+
@@ -55,6 +60,10 @@ func (c *ctx) Set(p kvl.Pair) error {
 }
 
 func (c *ctx) Delete(key []byte) error {
+	if c.readonly {
+		return kvl.ErrReadOnlyTx
+	}
+
 	res, err := c.sqlTx.Exec("DELETE FROM data WHERE key = $1", key)
 	if err != nil {
 		c.checkErr(err)
