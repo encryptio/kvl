@@ -31,3 +31,9 @@ func TestPSQLRangeMaxRandomReplacement(t *testing.T) {
 	defer s.Close()
 	testRangeMaxRandomReplacement(t, s)
 }
+
+func TestPSQLConsistencyWithRAM(t *testing.T) {
+	s := openPSQL(t)
+	defer s.Close()
+	testRandomOpConsistencyWithRAM(t, s)
+}

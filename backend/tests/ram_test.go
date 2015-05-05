@@ -19,3 +19,10 @@ func TestRAMRangeMaxRandomReplacement(t *testing.T) {
 	testRangeMaxRandomReplacement(t, s)
 	t.Logf("Counters = %#v", ram.GetCounters())
 }
+
+func TestRAMConsistencyWithRAM(t *testing.T) {
+	ram.ResetCounters()
+	s := ram.New()
+	testRandomOpConsistencyWithRAM(t, s)
+	t.Logf("Counters = %#v", ram.GetCounters())
+}
