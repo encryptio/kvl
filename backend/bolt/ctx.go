@@ -8,7 +8,7 @@ import (
 )
 
 type ctx struct {
-	bucket   *bolt.Bucket // if nil, assume empty db
+	bucket   *bolt.Bucket // if nil, assume empty db. Only possible if readonly is true.
 	readonly bool
 }
 

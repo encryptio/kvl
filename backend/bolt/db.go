@@ -45,6 +45,7 @@ func (db db) RunReadTx(tx kvl.Tx) (interface{}, error) {
 	err := db.b.View(func(btx *bolt.Tx) error {
 		ret = nil
 
+		// NB: may be nil
 		b := btx.Bucket(bucketName)
 
 		var err error

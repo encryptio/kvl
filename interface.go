@@ -11,11 +11,35 @@ var (
 	ErrReadOnlyTx = errors.New("transaction not opened for writing")
 )
 
+// A Tx is a serializable transactional operation.
+//
+// If a Tx returns a non-nil error, the transaction will be rolled back. If the
+// database engine has detected a serializability conflict, the transaction
+// will be rolled back. If neither of these happen (no database conflict and a
+// nil error return from the Tx), the transaction is committed.
+//
+// Txs should not cause sideeffects, because they may be called multiple times
+// before RunTx or RunReadTx return, regardless of if any operation on the Ctx
+// returns an error.
 type Tx func(Ctx) (interface{}, error)
 
+// A DB allows access to serializable transactions.
+//
+// During RunTx and RunReadTx, if the transaction has any serializability
+// conflicts, an operation may (but is not required to) return a non-nil error,
+// and the Tx will be called again until it succeeds.
 type DB interface {
+	// RunTx starts a read/write transaction.
 	RunTx(Tx) (interface{}, error)
+
+	// RunReadTx starts a read-only transaction. Attempted write operations will
+	// return ErrReadOnlyTx.
 	RunReadTx(Tx) (interface{}, error)
+
+	// Close the DB. Concurrently executing transactions' behavior is not
+	// defined, and should be avoided.
+	//
+	// The DB should not be used after Close is called.
 	Close()
 }
 

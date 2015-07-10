@@ -11,7 +11,8 @@ type subDB struct {
 	prefix []byte
 }
 
-// SubDB returns a DB whose RunTx returns a SubCtx with the given prefix.
+// SubDB returns a DB that wraps Ctxs given by the inner DB with a SubCtx with
+// the given prefix.
 func SubDB(db DB, prefix []byte) DB {
 	if otherSub, ok := db.(subDB); ok {
 		// chained subDBs are equivalent to a single subDB with a combined
@@ -45,6 +46,9 @@ type subCtx struct {
 	prefix []byte
 }
 
+// SubCtx returns a Ctx which adds the given prefix to all keys before sending
+// the results to the inner Ctx and removes the prefix from all keys coming from
+// the inner Ctx.
 func SubCtx(ctx Ctx, prefix []byte) Ctx {
 	if otherSub, ok := ctx.(subCtx); ok {
 		// same chaining logic as SubDB
