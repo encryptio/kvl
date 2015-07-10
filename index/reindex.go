@@ -75,9 +75,11 @@ func Reindex(db kvl.DB, fn Indexer, progress chan<- ReindexStats) (ReindexStats,
 	// 1st pass: Search for missing index entries and build bloom filter of
 	// index keys.
 	var from []byte
-	done := false
+	var done bool
 	for !done {
 		ret, err := db.RunTx(func(ctx kvl.Ctx) (interface{}, error) {
+			done = false
+
 			dataCtx := kvl.SubCtx(ctx, dataPrefix)
 			indexCtx := kvl.SubCtx(ctx, indexPrefix)
 
@@ -148,6 +150,8 @@ func Reindex(db kvl.DB, fn Indexer, progress chan<- ReindexStats) (ReindexStats,
 	for !done {
 		var thisRemove map[string]struct{}
 		ret, err := db.RunTx(func(ctx kvl.Ctx) (interface{}, error) {
+			done = false
+
 			thisRemove = make(map[string]struct{}, 100)
 			indexCtx := kvl.SubCtx(ctx, indexPrefix)
 
@@ -206,6 +210,8 @@ func Reindex(db kvl.DB, fn Indexer, progress chan<- ReindexStats) (ReindexStats,
 		done = false
 		for !done {
 			ret, err := db.RunTx(func(ctx kvl.Ctx) (interface{}, error) {
+				done = false
+
 				dataCtx := kvl.SubCtx(ctx, dataPrefix)
 
 				var stats ReindexStats
