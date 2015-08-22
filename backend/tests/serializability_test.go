@@ -10,6 +10,13 @@ import (
 )
 
 func testShuffleShardedIncrement(t *testing.T, s kvl.DB) {
+	// This test runs several goroutines which try to increment a random
+	// key in the db (possibly swapping it with another random key at the
+	// same time).
+	//
+	// After that happens, it ensures that the sum of all values is the
+	// total number of increments.
+
 	const (
 		transactionsPerGoroutine = 100
 		parallelism              = 10
@@ -134,6 +141,13 @@ func testShuffleShardedIncrement(t *testing.T, s kvl.DB) {
 }
 
 func testRangeMaxRandomReplacement(t *testing.T, s kvl.DB) {
+	// This test runs several goroutines which each read the entire
+	// keyspace, find the maximum value, then add one to the max and store
+	// that into a random location in the keyspace.
+	//
+	// Afterwards, it find the maximum and ensures that it is equal to the
+	// number of increments done.
+
 	const (
 		transactionsPerGoroutine = 20
 		parallelism              = 4
