@@ -17,6 +17,29 @@ func mustBigInt(s string, base int) *big.Int {
 	return n
 }
 
+func TestInvalidDecodeRegressions(t *testing.T) {
+	tests := [][]byte{
+		[]byte{0x40, 0xff, 0x71},             // a small negative number with the long header form
+		[]byte{0x80, 0x01, 'C', 0x00},        // invalid escape sequence
+		[]byte{0x5f},                         // negative zero
+		[]byte{0x70, 0x00},                   // long zero
+		[]byte{0x77, 0, 0, 0, 0, 0, 0, 0, 1}, // long one
+		[]byte{0x4e, 0xff, 0x30},             // long -207
+		[]byte{0x4d, 0xff, 0x30, 0x30},       // long -53199
+
+		// long length-length
+		[]byte{0x7f, 0xff, 0x00, 0x18, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0, 2},
+	}
+
+	for _, test := range tests {
+		var dec interface{}
+		err := UnpackInto(test, &dec)
+		if err == nil {
+			t.Errorf("Test case %#v unexpectedly succeeded", test)
+		}
+	}
+}
+
 func TestFormat(t *testing.T) {
 	tests := []struct {
 		Value   interface{}

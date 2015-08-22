@@ -90,6 +90,10 @@ func decodeInt(t []byte) (int, interface{}, error) {
 		v := int64(header & 0x0F)
 		if !p {
 			v = -v
+			if v == 0 {
+				// negative zero should have been encoded as positive zero
+				return 0, nil, ErrBadTupleData
+			}
 		}
 		return 1, v, nil
 	}
@@ -133,6 +137,22 @@ func decodeInt(t []byte) (int, interface{}, error) {
 
 		byteLen++
 
+		if byteLen < 16 {
+			// if the byteLen were less than 16, it should have been encoded
+			// in the int header
+			return 0, nil, ErrBadTupleData
+		}
+
+		byteLenByteCount := 8
+		for byteLenByteCount > 0 && (byteLen&(0xff<<uint((byteLenByteCount-1)*8))) == 0 {
+			byteLenByteCount--
+		}
+
+		if lenLen != byteLenByteCount {
+			// was not the shortest length encoding
+			return 0, nil, ErrBadTupleData
+		}
+
 		eaten += lenLen
 		t = t[lenLen:]
 	}
@@ -148,6 +168,21 @@ func decodeInt(t []byte) (int, interface{}, error) {
 
 		for i := 0; i < byteLen; i++ {
 			v = (v << 8) + int64(t[i]^dataMask)
+		}
+
+		if v < 16 {
+			// should have been encoded as an inline int
+			return 0, nil, ErrBadTupleData
+		}
+
+		byteCount := 8
+		for byteCount > 0 && (v&(0xff<<uint((byteCount-1)*8))) == 0 {
+			byteCount--
+		}
+
+		if byteLen != byteCount {
+			// was not the shortest int encoding
+			return 0, nil, ErrBadTupleData
 		}
 
 		if !p {
@@ -166,6 +201,11 @@ func decodeInt(t []byte) (int, interface{}, error) {
 	for i := 0; i < byteLen; i++ {
 		b.SetUint64(uint64(t[i] ^ dataMask))
 		n.Lsh(n, 8).Add(n, b)
+	}
+
+	if byteLen != (n.BitLen()+7)/8 {
+		// was not the shortest int encoding
+		return 0, nil, ErrBadTupleData
 	}
 
 	if !p {
@@ -191,6 +231,11 @@ func decodeByteString(t []byte) (int, interface{}, error) {
 		} else if b == 1 {
 			if len(t) == 0 {
 				// escape at end of data
+				return 0, nil, ErrBadTupleData
+			}
+
+			if t[0] > 1 {
+				// escaped a non-escapable byte
 				return 0, nil, ErrBadTupleData
 			}
 
