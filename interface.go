@@ -21,7 +21,12 @@ var (
 // Txs should not cause sideeffects, because they may be called multiple times
 // before RunTx or RunReadTx return, regardless of if any operation on the Ctx
 // returns an error.
-type Tx func(Ctx) (interface{}, error)
+//
+// Use closures to pass extra values into a transaction and/or return them.
+// Note that because transactions may fail midway through and be retried, you
+// may need to initialize your closed-over return variables at the start of the
+// transaction.
+type Tx func(Ctx) error
 
 // A DB allows access to serializable transactions.
 //
@@ -30,11 +35,11 @@ type Tx func(Ctx) (interface{}, error)
 // and the Tx will be called again until it succeeds.
 type DB interface {
 	// RunTx starts a read/write transaction.
-	RunTx(Tx) (interface{}, error)
+	RunTx(Tx) error
 
 	// RunReadTx starts a read-only transaction. Attempted write operations will
 	// return ErrReadOnlyTx.
-	RunReadTx(Tx) (interface{}, error)
+	RunReadTx(Tx) error
 
 	// Close the DB. Concurrently executing transactions' behavior is not
 	// defined, and should be avoided.

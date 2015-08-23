@@ -54,28 +54,28 @@ func (db *DB) ensureTable() error {
 	return nil
 }
 
-func (db *DB) RunTx(tx kvl.Tx) (interface{}, error) {
+func (db *DB) RunTx(tx kvl.Tx) error {
 	for {
-		ret, err, again := db.tryTx(tx, false)
+		err, again := db.tryTx(tx, false)
 		if !again {
-			return ret, err
+			return err
 		}
 	}
 }
 
-func (db *DB) RunReadTx(tx kvl.Tx) (interface{}, error) {
+func (db *DB) RunReadTx(tx kvl.Tx) error {
 	for {
-		ret, err, again := db.tryTx(tx, true)
+		err, again := db.tryTx(tx, true)
 		if !again {
-			return ret, err
+			return err
 		}
 	}
 }
 
-func (db *DB) tryTx(tx kvl.Tx, readonly bool) (interface{}, error, bool) {
+func (db *DB) tryTx(tx kvl.Tx, readonly bool) (error, bool) {
 	sqlTx, err := db.sqlDB.Begin()
 	if err != nil {
-		return nil, err, false
+		return err, false
 	}
 
 	var roClause string
@@ -85,25 +85,21 @@ func (db *DB) tryTx(tx kvl.Tx, readonly bool) (interface{}, error, bool) {
 
 	_, err = sqlTx.Exec("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE" + roClause)
 	if err != nil {
-		return nil, err, false
+		return err, false
 	}
 
 	ctx := &ctx{sqlTx: sqlTx, readonly: readonly}
 
-	ret, err := tx(ctx)
+	err = tx(ctx)
 	if err != nil {
 		ctx.checkErr(err)
 		err2 := sqlTx.Rollback()
 		ctx.checkErr(err2)
 		// err2 is not returned; the first error is probably more important
-		return nil, err, ctx.needsRetry
+		return err, ctx.needsRetry
 	}
 
 	err = sqlTx.Commit()
-	if err != nil {
-		ctx.checkErr(err)
-		return nil, err, ctx.needsRetry
-	}
-
-	return ret, nil, ctx.needsRetry
+	ctx.checkErr(err)
+	return err, ctx.needsRetry
 }

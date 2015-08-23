@@ -21,32 +21,32 @@ func New() kvl.DB {
 func (db *DB) Close() {
 }
 
-func (db *DB) RunTx(tx kvl.Tx) (interface{}, error) {
+func (db *DB) RunTx(tx kvl.Tx) error {
 	for {
-		data, err, again := db.tryTx(tx, false)
+		err, again := db.tryTx(tx, false)
 		if !again {
-			return data, err
+			return err
 		}
 	}
 }
 
-func (db *DB) RunReadTx(tx kvl.Tx) (interface{}, error) {
+func (db *DB) RunReadTx(tx kvl.Tx) error {
 	for {
-		data, err, again := db.tryTx(tx, true)
+		err, again := db.tryTx(tx, true)
 		if !again {
-			return data, err
+			return err
 		}
 	}
 }
 
-func (db *DB) tryTx(tx kvl.Tx, readonly bool) (interface{}, error, bool) {
+func (db *DB) tryTx(tx kvl.Tx, readonly bool) (error, bool) {
 	db.mu.Lock()
 	myData := db.headData
 	myData.refcount++
 	db.mu.Unlock()
 
 	ctx := newCtx(myData, &db.mu, readonly)
-	ret, err := tx(ctx)
+	err := tx(ctx)
 
 	db.mu.Lock()
 	if !ctx.aborted && err == nil {
@@ -97,7 +97,7 @@ func (db *DB) tryTx(tx kvl.Tx, readonly bool) (interface{}, error, bool) {
 		atomic.AddUint64(&theCounters.Commits, 1)
 	}
 
-	return ret, err, ctx.aborted
+	return err, ctx.aborted
 }
 
 func (db *DB) tryMerge() {

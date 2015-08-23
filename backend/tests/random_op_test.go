@@ -103,11 +103,11 @@ func genOpTrace(r *rand.Rand, length int) []randOp {
 
 func runOpTrace(ops []randOp, db kvl.DB) []opResult {
 	results := make([]opResult, len(ops))
-	db.RunTx(func(ctx kvl.Ctx) (interface{}, error) {
+	db.RunTx(func(ctx kvl.Ctx) error {
 		for i, op := range ops {
 			results[i] = op.Do(ctx)
 		}
-		return nil, nil
+		return nil
 	})
 	return results
 }

@@ -23,14 +23,14 @@ func SubDB(db DB, prefix []byte) DB {
 	return subDB{db, prefix}
 }
 
-func (s subDB) RunTx(tx Tx) (interface{}, error) {
-	return s.db.RunTx(func(ctx Ctx) (interface{}, error) {
+func (s subDB) RunTx(tx Tx) error {
+	return s.db.RunTx(func(ctx Ctx) error {
 		return tx(SubCtx(ctx, s.prefix))
 	})
 }
 
-func (s subDB) RunReadTx(tx Tx) (interface{}, error) {
-	return s.db.RunReadTx(func(ctx Ctx) (interface{}, error) {
+func (s subDB) RunReadTx(tx Tx) error {
+	return s.db.RunReadTx(func(ctx Ctx) error {
 		return tx(SubCtx(ctx, s.prefix))
 	})
 }

@@ -12,22 +12,22 @@ type LoggingDB struct {
 	Inner kvl.DB
 }
 
-func (l *LoggingDB) RunTx(tx kvl.Tx) (interface{}, error) {
-	return l.Inner.RunTx(func(ctx kvl.Ctx) (ret interface{}, err error) {
+func (l *LoggingDB) RunTx(tx kvl.Tx) error {
+	return l.Inner.RunTx(func(ctx kvl.Ctx) (err error) {
 		logCtx := &LoggingCtx{ctx}
 		log.Printf("%p.RunTx(%p) starting as %p", l, tx, ctx)
-		defer log.Printf("%p.RunTx(%p) returning (%v, %v)", l, tx, ret, err)
-		ret, err = tx(logCtx)
+		defer log.Printf("%p.RunTx(%p) returning %v", l, tx, err)
+		err = tx(logCtx)
 		return
 	})
 }
 
-func (l *LoggingDB) RunReadTx(tx kvl.Tx) (interface{}, error) {
-	return l.Inner.RunReadTx(func(ctx kvl.Ctx) (ret interface{}, err error) {
+func (l *LoggingDB) RunReadTx(tx kvl.Tx) error {
+	return l.Inner.RunReadTx(func(ctx kvl.Ctx) (err error) {
 		logCtx := &LoggingCtx{ctx}
 		log.Printf("%p.RunReadTx(%p) starting as %p", l, tx, ctx)
-		defer log.Printf("%p.RunReadTx(%p) returning (%v, %v)", l, tx, ret, err)
-		ret, err = tx(logCtx)
+		defer log.Printf("%p.RunReadTx(%p) returning %v", l, tx, err)
+		err = tx(logCtx)
 		return
 	})
 }

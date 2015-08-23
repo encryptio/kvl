@@ -28,16 +28,16 @@ func testShuffleShardedIncrement(t *testing.T, s kvl.DB) {
 		t.Fatalf("Couldn't clear DB: %v", err)
 	}
 
-	_, err = s.RunTx(func(ctx kvl.Ctx) (interface{}, error) {
+	err = s.RunTx(func(ctx kvl.Ctx) error {
 		zero := []byte("0")
 		for i := 0; i < rowCount; i++ {
 			key := []byte(fmt.Sprintf("%v", i))
 			err := ctx.Set(kvl.Pair{key, zero})
 			if err != nil {
-				return nil, err
+				return err
 			}
 		}
-		return nil, nil
+		return nil
 	})
 	if err != nil {
 		t.Fatalf("Couldn't add testing rows: %v", err)
@@ -47,7 +47,7 @@ func testShuffleShardedIncrement(t *testing.T, s kvl.DB) {
 	for i := 0; i < parallelism; i++ {
 		go func() {
 			for j := 0; j < transactionsPerGoroutine; j++ {
-				_, err := s.RunTx(func(ctx kvl.Ctx) (interface{}, error) {
+				err := s.RunTx(func(ctx kvl.Ctx) error {
 					// pick two random rows
 					var idA, idB int
 					for idA == idB {
@@ -60,11 +60,11 @@ func testShuffleShardedIncrement(t *testing.T, s kvl.DB) {
 					// read them
 					pairA, err := ctx.Get(keyA)
 					if err != nil {
-						return nil, err
+						return err
 					}
 					pairB, err := ctx.Get(keyB)
 					if err != nil {
-						return nil, err
+						return err
 					}
 
 					// maybe swap their contents
@@ -75,7 +75,7 @@ func testShuffleShardedIncrement(t *testing.T, s kvl.DB) {
 					// increment one of them
 					num, err := strconv.ParseInt(string(pairA.Value), 10, 0)
 					if err != nil {
-						return nil, err
+						return err
 					}
 					num++
 					pairA.Value = []byte(strconv.FormatInt(num, 10))
@@ -83,14 +83,14 @@ func testShuffleShardedIncrement(t *testing.T, s kvl.DB) {
 					// write both back
 					err = ctx.Set(pairA)
 					if err != nil {
-						return nil, err
+						return err
 					}
 					err = ctx.Set(pairB)
 					if err != nil {
-						return nil, err
+						return err
 					}
 
-					return nil, nil
+					return nil
 				})
 				if err != nil {
 					errCh <- err
@@ -109,21 +109,23 @@ func testShuffleShardedIncrement(t *testing.T, s kvl.DB) {
 	}
 
 	var total int
-	_, err = s.RunReadTx(func(ctx kvl.Ctx) (interface{}, error) {
+	err = s.RunReadTx(func(ctx kvl.Ctx) error {
+		total = 0
+
 		pairs, err := ctx.Range(kvl.RangeQuery{})
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		for _, pair := range pairs {
 			val, err := strconv.ParseInt(string(pair.Value), 10, 0)
 			if err != nil {
-				return nil, err
+				return err
 			}
 			total += int(val)
 		}
 
-		return nil, nil
+		return nil
 	})
 	if err != nil {
 		t.Fatalf("Couldn't run total transaction: %v", err)
@@ -159,16 +161,16 @@ func testRangeMaxRandomReplacement(t *testing.T, s kvl.DB) {
 		t.Fatalf("Couldn't clear DB: %v", err)
 	}
 
-	_, err = s.RunTx(func(ctx kvl.Ctx) (interface{}, error) {
+	err = s.RunTx(func(ctx kvl.Ctx) error {
 		zero := []byte("0")
 		for i := 0; i < rowCount; i++ {
 			key := []byte(fmt.Sprintf("%v", i))
 			err := ctx.Set(kvl.Pair{key, zero})
 			if err != nil {
-				return nil, err
+				return err
 			}
 		}
-		return nil, nil
+		return nil
 	})
 	if err != nil {
 		t.Fatalf("Couldn't add testing rows: %v", err)
@@ -178,17 +180,17 @@ func testRangeMaxRandomReplacement(t *testing.T, s kvl.DB) {
 	for i := 0; i < parallelism; i++ {
 		go func() {
 			for j := 0; j < transactionsPerGoroutine; j++ {
-				_, err := s.RunTx(func(ctx kvl.Ctx) (interface{}, error) {
+				err := s.RunTx(func(ctx kvl.Ctx) error {
 					// find the max value of all pairs
 					var max int64
 					pairs, err := ctx.Range(kvl.RangeQuery{})
 					if err != nil {
-						return nil, err
+						return err
 					}
 					for _, pair := range pairs {
 						num, err := strconv.ParseInt(string(pair.Value), 10, 0)
 						if err != nil {
-							return nil, err
+							return err
 						}
 						if num > max {
 							max = num
@@ -206,10 +208,10 @@ func testRangeMaxRandomReplacement(t *testing.T, s kvl.DB) {
 
 					err = ctx.Set(pair)
 					if err != nil {
-						return nil, err
+						return err
 					}
 
-					return nil, nil
+					return nil
 				})
 				if err != nil {
 					errCh <- err
@@ -228,22 +230,25 @@ func testRangeMaxRandomReplacement(t *testing.T, s kvl.DB) {
 	}
 
 	var max int64
-	_, err = s.RunReadTx(func(ctx kvl.Ctx) (interface{}, error) {
+	err = s.RunReadTx(func(ctx kvl.Ctx) error {
+		max = 0
+
 		pairs, err := ctx.Range(kvl.RangeQuery{})
 		if err != nil {
-			return nil, err
+			return err
 		}
+
 		for _, pair := range pairs {
 			val, err := strconv.ParseInt(string(pair.Value), 10, 0)
 			if err != nil {
-				return nil, err
+				return err
 			}
 			if val > max {
 				max = val
 			}
 		}
 
-		return nil, nil
+		return nil
 	})
 	if err != nil {
 		t.Fatalf("Couldn't run total transaction: %v", err)

@@ -30,10 +30,10 @@ func TestReindex(t *testing.T) {
 
 	db := ram.New()
 
-	_, err := db.RunTx(func(ctx kvl.Ctx) (interface{}, error) {
+	err := db.RunTx(func(ctx kvl.Ctx) error {
 		inner, _, err := Open(ctx, onlyOddFlipIndex)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		for i := 0; i < dbSize; i++ {
@@ -42,11 +42,11 @@ func TestReindex(t *testing.T) {
 
 			err := inner.Set(kvl.Pair{key, value})
 			if err != nil {
-				return nil, err
+				return err
 			}
 		}
 
-		return nil, nil
+		return nil
 	})
 	if err != nil {
 		t.Fatalf("Couldn't insert initial data: %v", err)
@@ -58,10 +58,10 @@ func TestReindex(t *testing.T) {
 		t.Fatalf("Couldn't reindex to flipIndex: %v", err)
 	}
 
-	_, err = db.RunTx(func(ctx kvl.Ctx) (interface{}, error) {
+	err = db.RunTx(func(ctx kvl.Ctx) error {
 		_, index, err := Open(ctx, flipIndex)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		for i := 0; i < dbSize; i++ {
@@ -70,16 +70,16 @@ func TestReindex(t *testing.T) {
 
 			p, err := index.Get(key)
 			if err != nil {
-				return nil, err
+				return err
 			}
 
 			if !p.Equal(kvl.Pair{key, value}) {
-				return nil, fmt.Errorf("index pairs not equal %#v != %#v",
+				return fmt.Errorf("index pairs not equal %#v != %#v",
 					p, kvl.Pair{key, value})
 			}
 		}
 
-		return nil, nil
+		return nil
 	})
 	if err != nil {
 		t.Fatalf("Couldn't check data after flipIndex reindex: %v", err)
@@ -92,12 +92,12 @@ func TestReindex(t *testing.T) {
 	}
 
 	found := 0
-	_, err = db.RunTx(func(ctx kvl.Ctx) (interface{}, error) {
+	err = db.RunTx(func(ctx kvl.Ctx) error {
 		found = 0
 
 		_, index, err := Open(ctx, onlyOddFlipIndex)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		for i := 0; i < dbSize; i++ {
@@ -109,17 +109,17 @@ func TestReindex(t *testing.T) {
 				continue
 			}
 			if err != nil {
-				return nil, err
+				return err
 			}
 			found++
 
 			if !p.Equal(kvl.Pair{key, value}) {
-				return nil, fmt.Errorf("index pairs not equal %#v != %#v",
+				return fmt.Errorf("index pairs not equal %#v != %#v",
 					p, kvl.Pair{key, value})
 			}
 		}
 
-		return nil, nil
+		return nil
 	})
 	if err != nil {
 		t.Fatalf("Couldn't check data after onlyOddFlipIndex reindex: %v", err)

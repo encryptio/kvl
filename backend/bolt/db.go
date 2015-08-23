@@ -24,33 +24,22 @@ func (db db) Close() {
 	db.b.Close()
 }
 
-func (db db) RunTx(tx kvl.Tx) (interface{}, error) {
-	var ret interface{}
-	err := db.b.Update(func(btx *bolt.Tx) error {
-		ret = nil
-
+func (db db) RunTx(tx kvl.Tx) error {
+	return db.b.Update(func(btx *bolt.Tx) error {
 		b, err := btx.CreateBucketIfNotExists(bucketName)
 		if err != nil {
 			return err
 		}
 
-		ret, err = tx(ctx{bucket: b, readonly: false})
-		return err
+		return tx(ctx{bucket: b, readonly: false})
 	})
-	return ret, err
 }
 
-func (db db) RunReadTx(tx kvl.Tx) (interface{}, error) {
-	var ret interface{}
-	err := db.b.View(func(btx *bolt.Tx) error {
-		ret = nil
-
+func (db db) RunReadTx(tx kvl.Tx) error {
+	return db.b.View(func(btx *bolt.Tx) error {
 		// NB: may be nil
 		b := btx.Bucket(bucketName)
 
-		var err error
-		ret, err = tx(ctx{bucket: b, readonly: true})
-		return err
+		return tx(ctx{bucket: b, readonly: true})
 	})
-	return ret, err
 }

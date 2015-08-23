@@ -26,9 +26,9 @@ func (ctx ctx) Get(key []byte) (kvl.Pair, error) {
 	val := ctx.bucket.Get(key)
 	if val == nil {
 		return kvl.Pair{}, kvl.ErrNotFound
-	} else {
-		return kvl.Pair{dupBytes(key), val}, nil
 	}
+
+	return kvl.Pair{dupBytes(key), val}, nil
 }
 
 func (ctx ctx) Range(query kvl.RangeQuery) ([]kvl.Pair, error) {

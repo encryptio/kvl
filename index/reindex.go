@@ -77,40 +77,40 @@ func Reindex(db kvl.DB, fn Indexer, progress chan<- ReindexStats) (ReindexStats,
 	var from []byte
 	var done bool
 	for !done {
-		ret, err := db.RunTx(func(ctx kvl.Ctx) (interface{}, error) {
+		var txStats ReindexStats
+		err := db.RunTx(func(ctx kvl.Ctx) error {
 			done = false
+			txStats = ReindexStats{}
 
 			dataCtx := kvl.SubCtx(ctx, dataPrefix)
 			indexCtx := kvl.SubCtx(ctx, indexPrefix)
-
-			var stats ReindexStats
 
 			ps, err := dataCtx.Range(kvl.RangeQuery{
 				Low:   from,
 				Limit: reindexChunkSize,
 			})
 			if err != nil {
-				return nil, err
+				return err
 			}
 
 			for _, p := range ps {
-				stats.DataRowsChecked++
+				txStats.DataRowsChecked++
 				indexPairs := fn(p)
 
 				for _, ip := range indexPairs {
 					ipDB, err := indexCtx.Get(ip.Key)
 					if err != nil && err != kvl.ErrNotFound {
-						return nil, err
+						return err
 					}
 					if !ip.Equal(ipDB) {
 						if err == kvl.ErrNotFound {
-							stats.Created++
+							txStats.Created++
 						} else {
-							stats.Edited++
+							txStats.Edited++
 						}
 						err = indexCtx.Set(ip)
 						if err != nil {
-							return nil, err
+							return err
 						}
 					}
 
@@ -124,16 +124,15 @@ func Reindex(db kvl.DB, fn Indexer, progress chan<- ReindexStats) (ReindexStats,
 				from = keys.LexNext(ps[len(ps)-1].Key)
 			}
 
-			stats.Transactions++
+			txStats.Transactions++
 
-			return stats, nil
+			return nil
 		})
 		if err != nil {
 			return stats, err
 		}
 
-		newStats := ret.(ReindexStats)
-		newStats.addTo(&stats)
+		txStats.addTo(&stats)
 
 		if progress != nil {
 			progress <- stats
@@ -149,24 +148,24 @@ func Reindex(db kvl.DB, fn Indexer, progress chan<- ReindexStats) (ReindexStats,
 	wantRemoveSize := 0
 	for !done {
 		var thisRemove map[string]struct{}
-		ret, err := db.RunTx(func(ctx kvl.Ctx) (interface{}, error) {
+		var txStats ReindexStats
+		err := db.RunTx(func(ctx kvl.Ctx) error {
 			done = false
+			txStats = ReindexStats{}
 
 			thisRemove = make(map[string]struct{}, 100)
 			indexCtx := kvl.SubCtx(ctx, indexPrefix)
-
-			var stats ReindexStats
 
 			ps, err := indexCtx.Range(kvl.RangeQuery{
 				Low:   from,
 				Limit: reindexDeleteChunkSize,
 			})
 			if err != nil {
-				return nil, err
+				return err
 			}
 
 			for _, p := range ps {
-				stats.IndexRowsChecked++
+				txStats.IndexRowsChecked++
 				if !bloom.Test(p.Key) {
 					thisRemove[string(p.Key)] = struct{}{}
 				}
@@ -178,9 +177,9 @@ func Reindex(db kvl.DB, fn Indexer, progress chan<- ReindexStats) (ReindexStats,
 				from = keys.LexNext(ps[len(ps)-1].Key)
 			}
 
-			stats.Transactions++
+			txStats.Transactions++
 
-			return stats, nil
+			return nil
 		})
 		if err != nil {
 			return stats, err
@@ -191,8 +190,7 @@ func Reindex(db kvl.DB, fn Indexer, progress chan<- ReindexStats) (ReindexStats,
 			wantRemoveSize += len(k) + 8
 		}
 
-		newStats := ret.(ReindexStats)
-		newStats.addTo(&stats)
+		txStats.addTo(&stats)
 
 		if progress != nil {
 			progress <- stats
@@ -209,23 +207,23 @@ func Reindex(db kvl.DB, fn Indexer, progress chan<- ReindexStats) (ReindexStats,
 		from = nil
 		done = false
 		for !done {
-			ret, err := db.RunTx(func(ctx kvl.Ctx) (interface{}, error) {
+			var txStats ReindexStats
+			err := db.RunTx(func(ctx kvl.Ctx) error {
 				done = false
+				txStats = ReindexStats{}
 
 				dataCtx := kvl.SubCtx(ctx, dataPrefix)
-
-				var stats ReindexStats
 
 				ps, err := dataCtx.Range(kvl.RangeQuery{
 					Low:   from,
 					Limit: reindexChunkSize,
 				})
 				if err != nil {
-					return nil, err
+					return err
 				}
 
 				for _, p := range ps {
-					stats.DataRowsChecked++
+					txStats.DataRowsChecked++
 					indexPairs := fn(p)
 
 					for _, ip := range indexPairs {
@@ -239,16 +237,15 @@ func Reindex(db kvl.DB, fn Indexer, progress chan<- ReindexStats) (ReindexStats,
 					from = keys.LexNext(ps[len(ps)-1].Key)
 				}
 
-				stats.Transactions++
+				txStats.Transactions++
 
-				return stats, nil
+				return nil
 			})
 			if err != nil {
 				return stats, err
 			}
 
-			newStats := ret.(ReindexStats)
-			newStats.addTo(&stats)
+			txStats.addTo(&stats)
 
 			if progress != nil {
 				progress <- stats
@@ -257,35 +254,34 @@ func Reindex(db kvl.DB, fn Indexer, progress chan<- ReindexStats) (ReindexStats,
 
 		// 4th pass: remove index entries we want to remove.
 		for len(wantRemove) > 0 {
-			ret, err := db.RunTx(func(ctx kvl.Ctx) (interface{}, error) {
+			var txStats ReindexStats
+			err := db.RunTx(func(ctx kvl.Ctx) error {
 				indexCtx := kvl.SubCtx(ctx, indexPrefix)
-
-				var stats ReindexStats
+				txStats = ReindexStats{}
 
 				for k := range wantRemove {
 					delete(wantRemove, k)
 
 					err := indexCtx.Delete([]byte(k))
 					if err != nil {
-						return nil, err
+						return err
 					}
 
-					stats.Deleted++
-					if stats.Deleted > reindexChunkSize {
+					txStats.Deleted++
+					if txStats.Deleted > reindexChunkSize {
 						break
 					}
 				}
 
-				stats.Transactions++
+				txStats.Transactions++
 
-				return stats, nil
+				return nil
 			})
 			if err != nil {
 				return stats, err
 			}
 
-			newStats := ret.(ReindexStats)
-			newStats.addTo(&stats)
+			txStats.addTo(&stats)
 
 			if progress != nil {
 				progress <- stats
