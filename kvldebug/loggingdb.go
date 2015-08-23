@@ -6,6 +6,8 @@ import (
 	"git.encryptio.com/kvl"
 )
 
+var _ kvl.DB = &LoggingDB{}
+
 type LoggingDB struct {
 	Inner kvl.DB
 }
@@ -15,6 +17,16 @@ func (l *LoggingDB) RunTx(tx kvl.Tx) (interface{}, error) {
 		logCtx := &LoggingCtx{ctx}
 		log.Printf("%p.RunTx(%p) starting as %p", l, tx, ctx)
 		defer log.Printf("%p.RunTx(%p) returning (%v, %v)", l, tx, ret, err)
+		ret, err = tx(logCtx)
+		return
+	})
+}
+
+func (l *LoggingDB) RunReadTx(tx kvl.Tx) (interface{}, error) {
+	return l.Inner.RunReadTx(func(ctx kvl.Ctx) (ret interface{}, err error) {
+		logCtx := &LoggingCtx{ctx}
+		log.Printf("%p.RunReadTx(%p) starting as %p", l, tx, ctx)
+		defer log.Printf("%p.RunReadTx(%p) returning (%v, %v)", l, tx, ret, err)
 		ret, err = tx(logCtx)
 		return
 	})
