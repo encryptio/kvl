@@ -12,7 +12,7 @@ type DB struct {
 	headData *data
 }
 
-func New() *DB {
+func New() kvl.DB {
 	return &DB{
 		headData: &data{make(map[string]*string, 0), 0, nil},
 	}

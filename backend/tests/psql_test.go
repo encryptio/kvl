@@ -4,10 +4,11 @@ import (
 	"os"
 	"testing"
 
+	"git.encryptio.com/kvl"
 	"git.encryptio.com/kvl/backend/psql"
 )
 
-func openPSQL(t *testing.T) *psql.DB {
+func openPSQL(t *testing.T) kvl.DB {
 	dsn := os.Getenv("PSQL_DSN")
 	if dsn == "" {
 		t.Skip("Set PSQL_DSN to enable PostgreSQL tests")
