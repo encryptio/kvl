@@ -11,13 +11,12 @@ import (
 type keyRange struct{ low, high string }
 
 type ctx struct {
-	mu         *sync.RWMutex
-	data       *data
-	toCommit   map[string]*string
-	lockKeys   []string
-	lockRanges []keyRange
-	aborted    bool
-	readonly   bool
+	mu       *sync.RWMutex
+	data     *data
+	toCommit map[string]*string
+	locks    locks
+	aborted  bool
+	readonly bool
 }
 
 func newCtx(head *data, mu *sync.RWMutex, readonly bool) *ctx {
@@ -31,6 +30,9 @@ func newCtx(head *data, mu *sync.RWMutex, readonly bool) *ctx {
 
 func (c *ctx) Get(key []byte) (kvl.Pair, error) {
 	sKey := string(key)
+
+	c.locks.keys = append(c.locks.keys, sKey)
+
 	v, ok := c.toCommit[string(sKey)]
 	if !ok {
 		c.mu.RLock()
@@ -53,7 +55,8 @@ func (c *ctx) Set(p kvl.Pair) error {
 	sKey := string(p.Key)
 	sValue := string(p.Value)
 
-	c.lockKeys = append(c.lockKeys, sKey)
+	c.locks.keys = append(c.locks.keys, sKey)
+
 	c.toCommit[sKey] = &sValue
 	return nil
 }
@@ -63,21 +66,19 @@ func (c *ctx) Delete(key []byte) error {
 		return kvl.ErrReadOnlyTx
 	}
 
-	_, err := c.Get(key)
+	_, err := c.Get(key) // NB: adds key to c.locks
 	if err != nil {
 		return err
 	}
 
 	sKey := string(key)
-
-	c.lockKeys = append(c.lockKeys, sKey)
 	c.toCommit[sKey] = nil
 	return nil
 }
 
 func (c *ctx) Range(query kvl.RangeQuery) ([]kvl.Pair, error) {
 	kr := keyRange{string(query.Low), string(query.High)}
-	c.lockRanges = append(c.lockRanges, kr)
+	c.locks.ranges = append(c.locks.ranges, kr)
 
 	c.mu.RLock()
 	mapParts := c.data.getRange(kr)

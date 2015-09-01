@@ -55,23 +55,10 @@ func (db *DB) tryTx(tx kvl.Tx, readonly bool) (error, bool) {
 		conflicting := false
 
 		newData := db.headData
-	OUTER:
 		for newData != myData {
-			for _, k := range ctx.lockKeys {
-				_, found := newData.contents[k]
-				if found {
-					conflicting = true
-					break OUTER
-				}
-			}
-
-			for _, r := range ctx.lockRanges {
-				for k := range newData.contents {
-					if k >= r.low && (r.high == "" || k < r.high) {
-						conflicting = true
-						break OUTER
-					}
-				}
+			if ctx.locks.conflicts(newData) {
+				conflicting = true
+				break
 			}
 
 			newData = newData.inner

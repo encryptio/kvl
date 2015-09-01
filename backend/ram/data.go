@@ -43,3 +43,27 @@ func (d data) getRangeInto(r keyRange, m map[string]*string) {
 		}
 	}
 }
+
+type locks struct {
+	keys   []string
+	ranges []keyRange
+}
+
+func (l locks) conflicts(d *data) bool {
+	for _, k := range l.keys {
+		_, found := d.contents[k]
+		if found {
+			return true
+		}
+	}
+
+	for _, r := range l.ranges {
+		for k := range d.contents {
+			if k >= r.low && (r.high == "" || k < r.high) {
+				return true
+			}
+		}
+	}
+
+	return false
+}
