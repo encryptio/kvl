@@ -35,6 +35,12 @@ func (s subDB) RunReadTx(tx Tx) error {
 	})
 }
 
+func (s subDB) WatchTx(tx Tx) (WatchResult, error) {
+	return s.db.WatchTx(func(ctx Ctx) error {
+		return tx(SubCtx(ctx, s.prefix))
+	})
+}
+
 // Close operations are ignored on SubDBs. You must close the inner DB yourself
 // at an appropriate time.
 func (s subDB) Close() {

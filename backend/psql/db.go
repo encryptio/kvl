@@ -103,3 +103,7 @@ func (db *DB) tryTx(tx kvl.Tx, readonly bool) (error, bool) {
 	ctx.checkErr(err)
 	return err, ctx.needsRetry
 }
+
+func (db *DB) WatchTx(tx kvl.Tx) (kvl.WatchResult, error) {
+	return nil, kvl.ErrWatchUnsupported
+}

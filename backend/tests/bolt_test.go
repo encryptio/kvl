@@ -44,3 +44,10 @@ func TestBoltConsistencyWithRAM(t *testing.T) {
 	defer db.Close()
 	testRandomOpConsistencyWithRAM(t, db)
 }
+
+func TestBoltWatchBasic(t *testing.T) {
+	dir, db := openBolt(t)
+	defer os.RemoveAll(dir)
+	defer db.Close()
+	testWatchBasic(t, db)
+}

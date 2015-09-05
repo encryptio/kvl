@@ -10,6 +10,7 @@ import (
 type DB struct {
 	mu       sync.RWMutex
 	headData *data
+	watches  []*watcher
 }
 
 func New() kvl.DB {
@@ -23,7 +24,7 @@ func (db *DB) Close() {
 
 func (db *DB) RunTx(tx kvl.Tx) error {
 	for {
-		err, again := db.tryTx(tx, false)
+		err, _, again := db.tryTx(tx, false, false)
 		if !again {
 			return err
 		}
@@ -32,14 +33,25 @@ func (db *DB) RunTx(tx kvl.Tx) error {
 
 func (db *DB) RunReadTx(tx kvl.Tx) error {
 	for {
-		err, again := db.tryTx(tx, true)
+		err, _, again := db.tryTx(tx, true, false)
 		if !again {
 			return err
 		}
 	}
 }
 
-func (db *DB) tryTx(tx kvl.Tx, readonly bool) (error, bool) {
+func (db *DB) WatchTx(tx kvl.Tx) (kvl.WatchResult, error) {
+	for {
+		err, wr, again := db.tryTx(tx, true, true)
+		if !again {
+			return wr, err
+		}
+	}
+}
+
+func (db *DB) tryTx(tx kvl.Tx, readonly bool, setupWatch bool) (error, kvl.WatchResult, bool) {
+	var wr kvl.WatchResult
+
 	db.mu.Lock()
 	myData := db.headData
 	myData.refcount++
@@ -49,6 +61,7 @@ func (db *DB) tryTx(tx kvl.Tx, readonly bool) (error, bool) {
 	err := tx(ctx)
 
 	db.mu.Lock()
+
 	if !ctx.aborted && err == nil {
 		// want to commit
 		// see if anything we depend on has changed
@@ -56,7 +69,7 @@ func (db *DB) tryTx(tx kvl.Tx, readonly bool) (error, bool) {
 
 		newData := db.headData
 		for newData != myData {
-			if ctx.locks.conflicts(newData) {
+			if ctx.locks.conflicts(newData.contents) {
 				conflicting = true
 				break
 			}
@@ -67,8 +80,24 @@ func (db *DB) tryTx(tx kvl.Tx, readonly bool) (error, bool) {
 		if conflicting {
 			ctx.aborted = true
 		} else {
+			// commit!
+
 			if len(ctx.toCommit) > 0 {
 				db.headData = &data{ctx.toCommit, 0, db.headData}
+
+				for i := 0; i < len(db.watches); i++ {
+					if db.watches[i].locks.conflicts(ctx.toCommit) {
+						db.watches[i].trigger()
+						db.watches = append(db.watches[:i], db.watches[i+1:]...)
+						i--
+					}
+				}
+			}
+
+			if setupWatch {
+				watcher := db.newWatcher(ctx.locks)
+				db.watches = append(db.watches, watcher)
+				wr = watcher
 			}
 		}
 	}
@@ -84,7 +113,18 @@ func (db *DB) tryTx(tx kvl.Tx, readonly bool) (error, bool) {
 		atomic.AddUint64(&theCounters.Commits, 1)
 	}
 
-	return err, ctx.aborted
+	return err, wr, ctx.aborted
+}
+
+func (db *DB) removeWatcher(w *watcher) {
+	db.mu.Lock()
+	for i := 0; i < len(db.watches); i++ {
+		if db.watches[i] == w {
+			db.watches = append(db.watches[:i], db.watches[i+1:]...)
+			i--
+		}
+	}
+	db.mu.Unlock()
 }
 
 func (db *DB) tryMerge() {

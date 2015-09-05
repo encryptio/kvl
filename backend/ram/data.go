@@ -49,16 +49,16 @@ type locks struct {
 	ranges []keyRange
 }
 
-func (l locks) conflicts(d *data) bool {
+func (l locks) conflicts(d map[string]*string) bool {
 	for _, k := range l.keys {
-		_, found := d.contents[k]
+		_, found := d[k]
 		if found {
 			return true
 		}
 	}
 
 	for _, r := range l.ranges {
-		for k := range d.contents {
+		for k := range d {
 			if k >= r.low && (r.high == "" || k < r.high) {
 				return true
 			}

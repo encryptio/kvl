@@ -26,3 +26,10 @@ func TestRAMConsistencyWithRAM(t *testing.T) {
 	testRandomOpConsistencyWithRAM(t, s)
 	t.Logf("Counters = %#v", ram.GetCounters())
 }
+
+func TestRAMWatchBasic(t *testing.T) {
+	ram.ResetCounters()
+	s := ram.New()
+	testWatchBasic(t, s)
+	t.Logf("Counters = %#v", ram.GetCounters())
+}

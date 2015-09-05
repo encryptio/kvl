@@ -32,6 +32,16 @@ func (l *LoggingDB) RunReadTx(tx kvl.Tx) error {
 	})
 }
 
+func (l *LoggingDB) WatchTx(tx kvl.Tx) (kvl.WatchResult, error) {
+	return l.Inner.WatchTx(func(ctx kvl.Ctx) (err error) {
+		logCtx := &LoggingCtx{ctx}
+		log.Printf("%p.WatchTx(%p) starting as %p", l, tx, ctx)
+		defer log.Printf("%p.WatchTx(%p) returning %v", l, tx, err)
+		err = tx(logCtx)
+		return
+	})
+}
+
 func (l *LoggingDB) Close() {
 	l.Inner.Close()
 	log.Printf("%p.Close()", l)

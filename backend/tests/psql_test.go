@@ -38,3 +38,9 @@ func TestPSQLConsistencyWithRAM(t *testing.T) {
 	defer s.Close()
 	testRandomOpConsistencyWithRAM(t, s)
 }
+
+func TestPSQLWatchBasic(t *testing.T) {
+	s := openPSQL(t)
+	defer s.Close()
+	testWatchBasic(t, s)
+}

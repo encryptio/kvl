@@ -43,3 +43,7 @@ func (db db) RunReadTx(tx kvl.Tx) error {
 		return tx(ctx{bucket: b, readonly: true})
 	})
 }
+
+func (db db) WatchTx(tx kvl.Tx) (kvl.WatchResult, error) {
+	return nil, kvl.ErrWatchUnsupported
+}
