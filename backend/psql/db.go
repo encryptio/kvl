@@ -2,6 +2,10 @@ package psql
 
 import (
 	"database/sql"
+	"errors"
+	"fmt"
+	"strconv"
+	"strings"
 
 	_ "github.com/lib/pq"
 
@@ -26,6 +30,12 @@ func Open(dsn string) (kvl.DB, error) {
 
 	db := &DB{sqlDB: sqlDB}
 
+	err = db.ensureVersion()
+	if err != nil {
+		sqlDB.Close()
+		return nil, err
+	}
+
 	err = db.ensureTable()
 	if err != nil {
 		sqlDB.Close()
@@ -37,6 +47,62 @@ func Open(dsn string) (kvl.DB, error) {
 
 func (db *DB) Close() {
 	db.sqlDB.Close()
+}
+
+type errOldServer struct {
+	Ver string
+}
+
+func (e errOldServer) Error() string {
+	return fmt.Sprintf("PostgreSQL server too old, got %v, need >=9.1", e.Ver)
+}
+
+func (db *DB) ensureVersion() error {
+	rows, err := db.sqlDB.Query("SHOW server_version")
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	if !rows.Next() {
+		return errors.New("no rows in result for \"SHOW server_version\"")
+	}
+
+	var ver string
+	err = rows.Scan(&ver)
+	if err != nil {
+		return err
+	}
+
+	err = rows.Err()
+	if err != nil {
+		return err
+	}
+
+	parts := strings.Split(ver, ".")
+	if len(parts) < 2 {
+		return fmt.Errorf("couldn't parse server_version %#v", ver)
+	}
+
+	major, err := strconv.ParseInt(parts[0], 10, 0)
+	if err != nil {
+		return fmt.Errorf("couldn't parse server_version %#v", ver)
+	}
+
+	if major < 9 {
+		return errOldServer{ver}
+	}
+
+	minor, err := strconv.ParseInt(parts[1], 10, 0)
+	if err != nil {
+		return fmt.Errorf("couldn't parse server_version %#v", ver)
+	}
+
+	if major == 9 && minor < 1 {
+		return errOldServer{ver}
+	}
+
+	return nil
 }
 
 func (db *DB) ensureTable() error {
