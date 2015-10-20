@@ -5,6 +5,10 @@ import (
 	"github.com/boltdb/bolt"
 )
 
+func init() {
+	kvl.RegisterBackend("bolt", Open)
+}
+
 var bucketName = []byte("kvl")
 
 type db struct {

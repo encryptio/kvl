@@ -12,6 +12,10 @@ import (
 	"git.encryptio.com/kvl"
 )
 
+func init() {
+	kvl.RegisterBackend("postgresql", Open)
+}
+
 type DB struct {
 	sqlDB *sql.DB
 }
