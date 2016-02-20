@@ -5,8 +5,8 @@ import (
 	"errors"
 	"fmt"
 
-	"git.encryptio.com/kvl"
-	"git.encryptio.com/kvl/tuple"
+	"github.com/encryptio/kvl"
+	"github.com/encryptio/kvl/tuple"
 )
 
 var (

@@ -3,7 +3,7 @@ package tests
 import (
 	"testing"
 
-	"git.encryptio.com/kvl/backend/ram"
+	"github.com/encryptio/kvl/backend/ram"
 )
 
 func TestRAMShuffleShardedIncrement(t *testing.T) {

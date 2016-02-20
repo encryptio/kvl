@@ -3,8 +3,8 @@ package index
 import (
 	"fmt"
 
-	"git.encryptio.com/kvl"
-	"git.encryptio.com/kvl/keys"
+	"github.com/encryptio/kvl"
+	"github.com/encryptio/kvl/keys"
 )
 
 const (

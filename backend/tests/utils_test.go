@@ -1,7 +1,7 @@
 package tests
 
 import (
-	"git.encryptio.com/kvl"
+	"github.com/encryptio/kvl"
 )
 
 func clearDB(s kvl.DB) error {

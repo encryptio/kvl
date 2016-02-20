@@ -3,7 +3,7 @@ package kvl
 import (
 	"bytes"
 
-	"git.encryptio.com/kvl/keys"
+	"github.com/encryptio/kvl/keys"
 )
 
 type subDB struct {

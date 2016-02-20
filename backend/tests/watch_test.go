@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"git.encryptio.com/kvl"
+	"github.com/encryptio/kvl"
 )
 
 func skipWatchIfUnsupported(t *testing.T, db kvl.DB) {

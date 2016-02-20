@@ -6,7 +6,7 @@ import (
 
 	"github.com/lib/pq"
 
-	"git.encryptio.com/kvl"
+	"github.com/encryptio/kvl"
 )
 
 type ctx struct {

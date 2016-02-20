@@ -3,7 +3,7 @@ package bolt
 import (
 	"bytes"
 
-	"git.encryptio.com/kvl"
+	"github.com/encryptio/kvl"
 	"github.com/boltdb/bolt"
 )
 

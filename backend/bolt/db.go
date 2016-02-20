@@ -1,7 +1,7 @@
 package bolt
 
 import (
-	"git.encryptio.com/kvl"
+	"github.com/encryptio/kvl"
 	"github.com/boltdb/bolt"
 )
 

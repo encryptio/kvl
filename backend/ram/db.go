@@ -4,7 +4,7 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"git.encryptio.com/kvl"
+	"github.com/encryptio/kvl"
 )
 
 type DB struct {

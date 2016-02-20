@@ -4,8 +4,8 @@ import (
 	"os"
 	"testing"
 
-	"git.encryptio.com/kvl"
-	"git.encryptio.com/kvl/backend/psql"
+	"github.com/encryptio/kvl"
+	"github.com/encryptio/kvl/backend/psql"
 )
 
 func openPSQL(t *testing.T) kvl.DB {

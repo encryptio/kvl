@@ -9,7 +9,7 @@ import (
 
 	_ "github.com/lib/pq"
 
-	"git.encryptio.com/kvl"
+	"github.com/encryptio/kvl"
 )
 
 func init() {

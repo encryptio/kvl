@@ -5,7 +5,7 @@ import (
 	"sort"
 	"sync"
 
-	"git.encryptio.com/kvl"
+	"github.com/encryptio/kvl"
 )
 
 type keyRange struct{ low, high string }

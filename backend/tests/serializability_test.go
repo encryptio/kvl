@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"testing"
 
-	"git.encryptio.com/kvl"
+	"github.com/encryptio/kvl"
 )
 
 func testShuffleShardedIncrement(t *testing.T, s kvl.DB) {

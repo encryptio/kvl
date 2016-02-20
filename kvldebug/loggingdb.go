@@ -3,7 +3,7 @@ package kvldebug
 import (
 	"log"
 
-	"git.encryptio.com/kvl"
+	"github.com/encryptio/kvl"
 )
 
 var _ kvl.DB = &LoggingDB{}
