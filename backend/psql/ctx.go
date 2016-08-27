@@ -16,9 +16,15 @@ type ctx struct {
 }
 
 func (c *ctx) checkErr(err error) {
-	if pgErr, ok := err.(*pq.Error); ok && pgErr.Code == "40001" {
-		// concurrent update, abort transaction and retry
-		c.needsRetry = true
+	if pgErr, ok := err.(*pq.Error); ok {
+		switch pgErr.Code {
+		case "40001": // serialization_failure
+			c.needsRetry = true
+		case "23505": // unique_violation; occurs when key creation races with itself
+			c.needsRetry = true
+		case "40P01": // deadlock_detected
+			c.needsRetry = true
+		}
 	}
 }
 
